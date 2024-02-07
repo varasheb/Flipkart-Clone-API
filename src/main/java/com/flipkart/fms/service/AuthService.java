@@ -13,4 +13,6 @@ public interface AuthService {
 
 	void permantDelete();
 
+	ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId);
+
 }
