@@ -15,4 +15,7 @@ public interface AuthService {
 
 	ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId);
 
+	ResponseEntity<ResponseStructure<UserResponse>> fetchById(int userId);
+
+
 }
