@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flipkart.fms.Util.ResponseStructure;
+import com.flipkart.fms.requestDTO.OtpModel;
 import com.flipkart.fms.requestDTO.UserRequest;
 import com.flipkart.fms.responseDTO.UserResponse;
 import com.flipkart.fms.service.AuthService;
@@ -37,5 +38,8 @@ public class AuthController {
 		return authservice.fetchById(userId);
 	}
 	
-	
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(@RequestBody @Valid OtpModel otpmodel){
+    	return authservice.verifyOTP(otpmodel);
+    }
 }
