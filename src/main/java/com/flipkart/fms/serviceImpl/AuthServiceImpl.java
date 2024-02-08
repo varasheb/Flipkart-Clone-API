@@ -79,4 +79,16 @@ public class AuthServiceImpl implements AuthService {
         });
 	}
 
+	@Override
+	public ResponseEntity<ResponseStructure<UserResponse>> fetchById(int userId) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
