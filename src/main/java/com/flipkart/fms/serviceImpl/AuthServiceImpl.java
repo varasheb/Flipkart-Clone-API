@@ -1,50 +1,157 @@
 package com.flipkart.fms.serviceImpl;
 
-import java.util.Optional;
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.Random;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.flipkart.fms.Util.MessageStructure;
 import com.flipkart.fms.Util.ResponseStructure;
+import com.flipkart.fms.cache.CacheStore;
 import com.flipkart.fms.entity.Customer;
 import com.flipkart.fms.entity.Seller;
 import com.flipkart.fms.entity.User;
 import com.flipkart.fms.exception.UserAlreadyExistException;
 import com.flipkart.fms.exception.UserNotFoundByIdException;
 import com.flipkart.fms.repository.UserRepository;
+import com.flipkart.fms.requestDTO.OtpModel;
 import com.flipkart.fms.requestDTO.UserRequest;
 import com.flipkart.fms.responseDTO.UserResponse;
 import com.flipkart.fms.service.AuthService;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
 	private UserRepository userRepo;
 	private PasswordEncoder encoded;
+	private CacheStore<String> otpCacheStore;
+	private CacheStore<User> userCacheStore;
+	private JavaMailSender javaMailSender;
+	
+
+	@Override
+	public ResponseEntity<ResponseStructure<UserResponse>> fetchById(int userId) {
+		User user =userRepo.findById(userId).get();
+		if(user!=null) {
+		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
+		structure.setStatus(HttpStatus.CREATED.value());
+		structure.setMessage("Found User");
+		structure.setData(mapToUserResponce(user));
+		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+		}else throw new UserNotFoundByIdException("User Not FoundBy Id!!!");
+	}
+
+	@Override
+	public ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId) {
+		User user =userRepo.findById(userId).get();
+		if(user!=null) {
+		user.setDeleted(true);
+		user=userRepo.save(user);
+		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
+		structure.setStatus(HttpStatus.CREATED.value());
+		structure.setMessage("Sucefully Deleted User");
+		structure.setData(mapToUserResponce(user));
+		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+		}else throw new UserNotFoundByIdException("User Not FoundBy Id!!!");
+	}
 	
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userrequest) {
-		User user =mapToUser(userrequest);
-		userRepo.findByEmail(user.getEmail()).map(u->{
-			if(u.isEmailVerified()) throw new UserAlreadyExistException("User Already Exist");
-			else {
-				//send an email to client with otp
-			}
-			return u;
-		}).orElse(userRepo.save(user));
+		
+		if(userRepo.existsByEmail(userrequest.getEmail())) throw new UserAlreadyExistException("Email is Already Taken");
+		 String OTP=generateOTP();
+		 User user=mapToUser(userrequest);
+
+		 userCacheStore.add(userrequest.getEmail(), user);
+		 otpCacheStore.add(userrequest.getEmail(), OTP);
+		 try {
+			sendOtpToMail(user, OTP);
+		} catch (MessagingException e) {
+			log.error("The email address dosen't exist!!!!");
+		}
 		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
-		structure.setStatus(HttpStatus.CREATED.value());
-		structure.setMessage("Sucefully saved User");
+		structure.setStatus(HttpStatus.ACCEPTED.value());
+		structure.setMessage("Please verify through OTP sent on Email:"+user.getEmail());
 		structure.setData(mapToUserResponce(user));
-		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.ACCEPTED);
 		
 	}
+	@Override
+	public ResponseEntity<ResponseStructure<UserResponse>>  verifyOTP(OtpModel otpmodel) {
+		User user=userCacheStore.get(otpmodel.getEmail());
+		String otp =otpCacheStore.get(otpmodel.getEmail());
+		if(otp==null) throw new IllegalArgumentException("OTP is expired!!"); 
+		if(user==null) throw new IllegalArgumentException("Registration Session expired!!"); 
+			if(otp.equals(otpmodel.getOtp())) {
+				user.setEmailVerified(true);
+				user=userRepo.save(user);
+				try {
+					sendMailForSucess(user);
+				} catch (MessagingException e) {
+					log.error("The email address dosen't exist!!!!");
+				}
+				ResponseStructure<UserResponse> structure = new ResponseStructure<>();
+				structure.setStatus(HttpStatus.CREATED.value());
+				structure.setMessage("Sucefully Saved the User");
+				structure.setData(mapToUserResponce(user));
+				return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+			}else  throw new IllegalAccessError("Invalid OTP!!");
+	}
+	private String generateOTP() {
+		return String.valueOf(new Random().nextInt(10000,999999));
+	}
+	@Async
+	private void sendMail(MessageStructure message) throws MessagingException {
+		MimeMessage mimeMessage=javaMailSender.createMimeMessage();
+		MimeMessageHelper helper=new MimeMessageHelper(mimeMessage, true);
+		helper.setTo(message.getTo());
+		helper.setSubject(message.getSubject());
+		helper.setSentDate(message.getSentDate());
+		helper.setText(message.getText());
+		javaMailSender.send(mimeMessage);
+	}
+    private void sendOtpToMail(User user,String OTP) throws MessagingException {
+    	sendMail(MessageStructure.builder().to(user.getEmail())
+    	                          .subject("otp sent form flipkart")
+    	                          .sentDate(new Date(LocalDate.now().getYear(), LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth()))
+    	                          .text("<h1>Flipkart Registration</h1><br>" +"Hi, "
+    	        		                  +user.getUsername()+" <br>"
+    	        				          +"Complete your Registration of Flipkart using the OTP<br><br>"
+    	        		                  +"<h1>"+OTP+"</h1>"
+    	        		                  +"<br><br>"
+    	        		                  +"with Best Regards"
+    	        		                  +"Flipkart").build());
 
+		
+    }
+    private void sendMailForSucess(User user) throws MessagingException {
+    	sendMail(MessageStructure.builder().to(user.getEmail())
+    	                          .subject("flipkart Registration Sucefully")
+    	                          .sentDate(new Date(LocalDate.now().getYear(), LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth()))
+    	                          .text("<h1>Flipkart Registration</h1><br>" +"Hi, "
+    	        		                  +user.getUsername()+" <br>"
+    	        				          +"our Registration of Flipkart is Sucefully<br><br>"
+    	        		                  +"<br><br>"
+    	        		                  +"with Best Regards"
+    	        		                  +"Flipkart").build());
+
+		
+    }
 	public <T extends User> T mapToUser(UserRequest userRequest) {
 		User user = null;
 		switch (userRequest.getUserRole()) {
@@ -79,32 +186,5 @@ public class AuthServiceImpl implements AuthService {
             userRepo.delete(user);
         });
 	}
-
-	@Override
-	public ResponseEntity<ResponseStructure<UserResponse>> fetchById(int userId) {
-		User user =userRepo.findById(userId).get();
-		if(user!=null) {
-		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
-		structure.setStatus(HttpStatus.CREATED.value());
-		structure.setMessage("Found User");
-		structure.setData(mapToUserResponce(user));
-		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
-		}else throw new UserNotFoundByIdException("User Not FoundBy Id!!!");
-	}
-
-	@Override
-	public ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId) {
-		User user =userRepo.findById(userId).get();
-		if(user!=null) {
-		user.setDeleted(true);
-		user=userRepo.save(user);
-		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
-		structure.setStatus(HttpStatus.CREATED.value());
-		structure.setMessage("Sucefully Deleted User");
-		structure.setData(mapToUserResponce(user));
-		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
-		}else throw new UserNotFoundByIdException("User Not FoundBy Id!!!");
-	}
-
 
 }

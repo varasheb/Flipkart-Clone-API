@@ -13,9 +13,9 @@ import lombok.AllArgsConstructor;
 public class ScheduleJobs {
 	private AuthService authService;
 	
-//	@Scheduled(fixedDelay = 5000l*60)
-//	public void deleteUser() {
-//	     authService.permantDelete();
-//        System.err.println("User DELETED");
-//	}
+	@Scheduled(fixedDelay = 5000l*60)
+	public void deleteUser() {
+	     authService.permantDelete();
+        System.err.println("User DELETED");
+	}
 }
