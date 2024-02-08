@@ -2,7 +2,6 @@ package com.flipkart.fms.serviceImpl;
 
 import java.time.LocalDate;
 import java.util.Date;
-import java.util.Optional;
 import java.util.Random;
 
 import org.springframework.http.HttpStatus;
@@ -30,7 +29,10 @@ import com.flipkart.fms.service.AuthService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -69,7 +71,7 @@ public class AuthServiceImpl implements AuthService {
 	}
 	
 	@Override
-	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userrequest) throws MessagingException {
+	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userrequest) {
 		
 		if(userRepo.existsByEmail(userrequest.getEmail())) throw new UserAlreadyExistException("Email is Already Taken");
 		 String OTP=generateOTP();
@@ -77,15 +79,14 @@ public class AuthServiceImpl implements AuthService {
 
 		 userCacheStore.add(userrequest.getEmail(), user);
 		 otpCacheStore.add(userrequest.getEmail(), OTP);
-		 MessageStructure message=new MessageStructure();
-		 message.setText(OTP);
-		 message.setSubject("otp sent form flipkart");
-		 message.setTo(user.getEmail());
-		// message.setSentDate();
-		sendMail(message);
+		 try {
+			sendOtpToMail(user, OTP);
+		} catch (MessagingException e) {
+			log.error("The email address dosen't exist!!!!");
+		}
 		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
 		structure.setStatus(HttpStatus.ACCEPTED.value());
-		structure.setMessage("Please verify through OTP :"+OTP);
+		structure.setMessage("Please verify through OTP sent on Email:"+user.getEmail());
 		structure.setData(mapToUserResponce(user));
 		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.ACCEPTED);
 		
@@ -98,7 +99,12 @@ public class AuthServiceImpl implements AuthService {
 		if(user==null) throw new IllegalArgumentException("Registration Session expired!!"); 
 			if(otp.equals(otpmodel.getOtp())) {
 				user.setEmailVerified(true);
-				userRepo.save(user);
+				user=userRepo.save(user);
+				try {
+					sendMailForSucess(user);
+				} catch (MessagingException e) {
+					log.error("The email address dosen't exist!!!!");
+				}
 				ResponseStructure<UserResponse> structure = new ResponseStructure<>();
 				structure.setStatus(HttpStatus.CREATED.value());
 				structure.setMessage("Sucefully Saved the User");
@@ -119,7 +125,33 @@ public class AuthServiceImpl implements AuthService {
 		helper.setText(message.getText());
 		javaMailSender.send(mimeMessage);
 	}
+    private void sendOtpToMail(User user,String OTP) throws MessagingException {
+    	sendMail(MessageStructure.builder().to(user.getEmail())
+    	                          .subject("otp sent form flipkart")
+    	                          .sentDate(new Date(LocalDate.now().getYear(), LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth()))
+    	                          .text("<h1>Flipkart Registration</h1><br>" +"Hi, "
+    	        		                  +user.getUsername()+" <br>"
+    	        				          +"Complete your Registration of Flipkart using the OTP<br><br>"
+    	        		                  +"<h1>"+OTP+"</h1>"
+    	        		                  +"<br><br>"
+    	        		                  +"with Best Regards"
+    	        		                  +"Flipkart").build());
 
+		
+    }
+    private void sendMailForSucess(User user) throws MessagingException {
+    	sendMail(MessageStructure.builder().to(user.getEmail())
+    	                          .subject("flipkart Registration Sucefully")
+    	                          .sentDate(new Date(LocalDate.now().getYear(), LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth()))
+    	                          .text("<h1>Flipkart Registration</h1><br>" +"Hi, "
+    	        		                  +user.getUsername()+" <br>"
+    	        				          +"our Registration of Flipkart is Sucefully<br><br>"
+    	        		                  +"<br><br>"
+    	        		                  +"with Best Regards"
+    	        		                  +"Flipkart").build());
+
+		
+    }
 	public <T extends User> T mapToUser(UserRequest userRequest) {
 		User user = null;
 		switch (userRequest.getUserRole()) {
