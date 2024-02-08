@@ -12,6 +12,7 @@ import com.flipkart.fms.entity.Customer;
 import com.flipkart.fms.entity.Seller;
 import com.flipkart.fms.entity.User;
 import com.flipkart.fms.exception.UserAlreadyExistException;
+import com.flipkart.fms.exception.UserNotFoundByIdException;
 import com.flipkart.fms.repository.UserRepository;
 import com.flipkart.fms.requestDTO.UserRequest;
 import com.flipkart.fms.responseDTO.UserResponse;
@@ -81,14 +82,29 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> fetchById(int userId) {
-		// TODO Auto-generated method stub
-		return null;
+		User user =userRepo.findById(userId).get();
+		if(user!=null) {
+		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
+		structure.setStatus(HttpStatus.CREATED.value());
+		structure.setMessage("Found User");
+		structure.setData(mapToUserResponce(user));
+		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+		}else throw new UserNotFoundByIdException("User Not FoundBy Id!!!");
 	}
 
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId) {
-		// TODO Auto-generated method stub
-		return null;
+		User user =userRepo.findById(userId).get();
+		if(user!=null) {
+		user.setDeleted(true);
+		user=userRepo.save(user);
+		ResponseStructure<UserResponse> structure = new ResponseStructure<>();
+		structure.setStatus(HttpStatus.CREATED.value());
+		structure.setMessage("Sucefully Deleted User");
+		structure.setData(mapToUserResponce(user));
+		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+		}else throw new UserNotFoundByIdException("User Not FoundBy Id!!!");
 	}
+
 
 }

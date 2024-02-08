@@ -13,8 +13,9 @@ public interface AuthService {
 
 	void permantDelete();
 
+	ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId);
+
 	ResponseEntity<ResponseStructure<UserResponse>> fetchById(int userId);
 
-	ResponseEntity<ResponseStructure<UserResponse>> deleteById(int userId);
 
 }
