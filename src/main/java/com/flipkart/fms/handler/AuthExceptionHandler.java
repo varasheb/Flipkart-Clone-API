@@ -16,6 +16,9 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.flipkart.fms.exception.UserAlreadyExistException;
+import com.flipkart.fms.exception.UserNotFoundByIdException;
+
+import jakarta.mail.MessagingException;
 
 @RestControllerAdvice
 public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
@@ -39,12 +42,12 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 	@ExceptionHandler (UserAlreadyExistException.class)
 	public ResponseEntity<Object> handlerAdminNotFoundById(UserAlreadyExistException ex){
-		return structure(HttpStatus.FOUND,ex.getMessage(),"Only one ADMIN can be allowed");
+		return structure(HttpStatus.FOUND,ex.getMessage(),"Only one Email can be allowed");
 	}
-//	@ExceptionHandler (UserNotFoundByIdException.class)
-//	public ResponseEntity<Object> handlerUserNotFoundById(UserNotFoundByIdException ex){
-//		return structure(HttpStatus.NOT_FOUND,ex.getMessage(),"User Doesn't Exist!!!");
-//	}
+	@ExceptionHandler (UserNotFoundByIdException.class)
+	public ResponseEntity<Object> handlerUserNotFoundById(UserNotFoundByIdException ex){
+		return structure(HttpStatus.NOT_FOUND,ex.getMessage(),"User Doesn't Exist!!!");
+	}
 	@ExceptionHandler (IllegalArgumentException.class)
 	public ResponseEntity<Object> handlerUserNotFoundById(IllegalArgumentException ex){
 		return structure(HttpStatus.BAD_REQUEST,ex.getMessage(),"Request Not Applicable");
