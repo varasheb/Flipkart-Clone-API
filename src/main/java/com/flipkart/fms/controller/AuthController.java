@@ -11,11 +11,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flipkart.fms.Util.ResponseStructure;
+import com.flipkart.fms.requestDTO.AuthRequest;
 import com.flipkart.fms.requestDTO.OtpModel;
 import com.flipkart.fms.requestDTO.UserRequest;
+import com.flipkart.fms.responseDTO.AuthResponse;
 import com.flipkart.fms.responseDTO.UserResponse;
 import com.flipkart.fms.service.AuthService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
@@ -42,4 +45,8 @@ public class AuthController {
     public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(@RequestBody @Valid OtpModel otpmodel){
     	return authservice.verifyOTP(otpmodel);
     }
+    @PostMapping("/login")
+	public ResponseEntity<ResponseStructure<AuthResponse>> userLogin(@RequestBody AuthRequest authRequest, HttpServletResponse httpServletResponse){
+		return authservice.userLogin(authRequest,httpServletResponse);
+	}
 }
