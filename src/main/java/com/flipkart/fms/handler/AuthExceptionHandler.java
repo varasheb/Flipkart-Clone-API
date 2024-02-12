@@ -19,8 +19,6 @@ import com.flipkart.fms.exception.UserAlreadyExistException;
 import com.flipkart.fms.exception.UserNotFoundByIdException;
 import com.flipkart.fms.exception.UserNotLoggedInException;
 
-import jakarta.mail.MessagingException;
-
 @RestControllerAdvice
 public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 	private ResponseEntity<Object> structure (HttpStatus status,String message,Object rootCause){

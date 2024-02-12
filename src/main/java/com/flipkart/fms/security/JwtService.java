@@ -8,11 +8,12 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import lombok.AllArgsConstructor;
 
 @Service
 public class JwtService {
@@ -33,6 +34,9 @@ public class JwtService {
 	public String generateRefreshToken(String username) {
 		return generateJWT(new HashMap<String, Object>(), username, refreshExpirationInSeconds * 1000l);
 	}
+	public String extractUsername(String Token) {
+		return jwtParser(Token).getSubject();	
+	}
 
 	private String generateJWT(Map<String, Object> claims, String username, Long expiry) {
 
@@ -50,5 +54,10 @@ public class JwtService {
 		byte[] secretBytes = Decoders.BASE64.decode(secret);
 		return Keys.hmacShaKeyFor(secretBytes);
 	} 
+	private Claims jwtParser(String Token) {
+		JwtParser jwtparser=Jwts.parserBuilder().setSigningKey(getSignature()).build();
+		return jwtparser.parseClaimsJws(Token).getBody();
+	}
+	
 
 }

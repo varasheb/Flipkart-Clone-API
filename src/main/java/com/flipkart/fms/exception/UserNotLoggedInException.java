@@ -1,5 +1,6 @@
 package com.flipkart.fms.exception;
 
+@SuppressWarnings("serial")
 public class UserNotLoggedInException extends RuntimeException {
 	private String message;
 	

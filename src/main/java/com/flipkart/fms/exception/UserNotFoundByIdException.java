@@ -1,5 +1,6 @@
 package com.flipkart.fms.exception;
 
+@SuppressWarnings("serial")
 public class UserNotFoundByIdException extends RuntimeException {
 	private String message;
 	public UserNotFoundByIdException(String message) {

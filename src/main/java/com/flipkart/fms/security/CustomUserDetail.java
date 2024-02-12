@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.flipkart.fms.entity.User;
 
+@SuppressWarnings("serial")
 public class CustomUserDetail implements UserDetails{
 
 	  @Autowired

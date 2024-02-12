@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,8 @@ import org.springframework.stereotype.Service;
 import com.flipkart.fms.Util.CookieManager;
 import com.flipkart.fms.Util.MessageStructure;
 import com.flipkart.fms.Util.ResponseStructure;
+import com.flipkart.fms.Util.SimpleResponseStructure;
+import com.flipkart.fms.Util.SimpleResponseStructure;
 import com.flipkart.fms.cache.CacheStore;
 import com.flipkart.fms.entity.AccessToken;
 import com.flipkart.fms.entity.Customer;
@@ -46,12 +49,8 @@ import com.flipkart.fms.service.AuthService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 
 @Slf4j
 @Service
@@ -302,7 +301,7 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
-	public ResponseEntity<ResponseStructure<String>> userLogout(String refreshToken, String accessToken,
+	public ResponseEntity<SimpleResponseStructure> userLogout(String refreshToken, String accessToken,
 			HttpServletResponse response) {
 		if(accessToken==null && refreshToken==null) throw new UserNotLoggedInException("User is Not LoggedIn !!");
 		accessTokenRepository.findByToken(accessToken).ifPresent(at->{
@@ -315,28 +314,60 @@ public class AuthServiceImpl implements AuthService {
 		});
 		response.addCookie(cookieManager.invalidate(new Cookie("rt","")));
 		response.addCookie(cookieManager.invalidate(new Cookie("at","")));
-					ResponseStructure<String> authStructure=new ResponseStructure<>();
-					authStructure.setStatus(HttpStatus.OK.value());
-					authStructure.setMessage("Logout success");
-					authStructure.setData("Logged out Sucefully!!");;
-					return new ResponseEntity(authStructure,HttpStatus.OK);
-			}
+		return ResponseEntity.ok(SimpleResponseStructure.builder().status(HttpStatus.OK.value()).message("Logout success").build());
+	}
 
 	@Override
 	public void permentDeleteToken() {
-	  List<AccessToken> expiredAccessTokens=accessTokenRepository.findAllByExpirationBefore(LocalDateTime.now());
-		  expiredAccessTokens.forEach(at->{
-		  at.setUser(null);
-		  accessTokenRepository.save(at);
-	  });
-		  accessTokenRepository.deleteAll(expiredAccessTokens);
-		  List<RefreshToken> expiredRefreshTokens=refreshTokenRepository.findAllByExpirationBefore(LocalDateTime.now());
-				  expiredRefreshTokens.forEach(rt->{
-		  rt.setUser(null);
-		  refreshTokenRepository.save(rt);
-	  });
-		 refreshTokenRepository.deleteAll(expiredRefreshTokens);
+		List<AccessToken> expiredAccessTokens=accessTokenRepository.findAllByExpirationBefore(LocalDateTime.now());
+		expiredAccessTokens.forEach(at->{
+			at.setUser(null);
+			accessTokenRepository.save(at);
+		});
+		accessTokenRepository.deleteAll(expiredAccessTokens);
+		List<RefreshToken> expiredRefreshTokens=refreshTokenRepository.findAllByExpirationBefore(LocalDateTime.now());
+		expiredRefreshTokens.forEach(rt->{
+			rt.setUser(null);
+			refreshTokenRepository.save(rt);
+		});
+		refreshTokenRepository.deleteAll(expiredRefreshTokens);
+	}
+	@Override
+	public ResponseEntity<SimpleResponseStructure> revokeAllAccess(String refreshToken, String accessToken,
+			HttpServletResponse response) {
+		if(accessToken==null && refreshToken==null) throw new UserNotLoggedInException("User is Not LoggedIn !!");
+        userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).ifPresent(user->{
+		accessTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,accessToken).forEach(at->{
+				at.setBlocked(true);
+				accessTokenRepository.save(at);
+			});
+		refreshTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,refreshToken).forEach(rt->{
+				rt.setBlocked(true);
+				refreshTokenRepository.save(rt);
+			});	
+		});
+        response.addCookie(cookieManager.invalidate(new Cookie("rt","")));
+		response.addCookie(cookieManager.invalidate(new Cookie("at","")));
+		return ResponseEntity.ok(SimpleResponseStructure.builder().status(HttpStatus.OK.value()).message("Revoke  all Device Sucess").build());
+	}
+
+	@Override
+	public ResponseEntity<SimpleResponseStructure> revokeOtherAccess(String refreshToken, String accessToken,
+			HttpServletResponse response) {
+		if(accessToken==null && refreshToken==null) throw new UserNotLoggedInException("User is Not LoggedIn !!");
+        userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).ifPresent(user->{
+		accessTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,accessToken).forEach(at->{
+				at.setBlocked(true);
+				accessTokenRepository.save(at);
+			});
+		refreshTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,refreshToken).forEach(rt->{
+				rt.setBlocked(true);
+				refreshTokenRepository.save(rt);
+			});	
+		});
+		return ResponseEntity.ok(SimpleResponseStructure.builder().status(HttpStatus.OK.value()).message("Revoke other Device success!!!").build());
+
 	}
 
 
-	}
+}

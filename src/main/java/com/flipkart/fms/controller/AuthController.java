@@ -1,6 +1,7 @@
 package com.flipkart.fms.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flipkart.fms.Util.ResponseStructure;
+import com.flipkart.fms.Util.SimpleResponseStructure;
 import com.flipkart.fms.requestDTO.AuthRequest;
 import com.flipkart.fms.requestDTO.OtpModel;
 import com.flipkart.fms.requestDTO.UserRequest;
@@ -19,7 +21,6 @@ import com.flipkart.fms.responseDTO.AuthResponse;
 import com.flipkart.fms.responseDTO.UserResponse;
 import com.flipkart.fms.service.AuthService;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -35,10 +36,12 @@ public class AuthController {
 		return authservice.registerUser(userrequest);
 	}
 	@DeleteMapping("/users/{userId}")
+	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
 	public ResponseEntity<ResponseStructure<UserResponse>> deleteById(@PathVariable int userId){
 		return authservice.deleteById(userId);
 	}
 	@GetMapping("/users/{userId}")
+	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
 	public ResponseEntity<ResponseStructure<UserResponse>> fetchById(@PathVariable int userId){
 		return authservice.fetchById(userId);
 	}
@@ -52,8 +55,19 @@ public class AuthController {
 		return authservice.userLogin(authRequest,httpServletResponse);
 	}
     @PostMapping("/logout")
-    public ResponseEntity<ResponseStructure<String>> userLogout(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String acessToken,HttpServletResponse response){
-		return authservice.userLogout(refreshToken,acessToken,response);
-    	
+	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
+    public ResponseEntity<SimpleResponseStructure> userLogout(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String acessToken,HttpServletResponse response){
+		return authservice.userLogout(refreshToken,acessToken,response);	
     }
+    @PostMapping("/revoke-other")
+	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
+    public ResponseEntity<SimpleResponseStructure> revokeOtherDevices(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String accessToken,HttpServletResponse response) {
+    	return authservice.revokeOtherAccess(refreshToken,accessToken,response);
+    }
+    @PostMapping("/revoke-All")
+	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
+    public ResponseEntity<SimpleResponseStructure> revokeAllDevices(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String accessToken,HttpServletResponse response) {
+    	return authservice.revokeAllAccess(refreshToken,accessToken,response);
+    }
+    
 }
