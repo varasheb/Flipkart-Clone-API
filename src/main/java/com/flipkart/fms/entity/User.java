@@ -43,8 +43,5 @@ public class User {
 	private UserRole userRole;
 	private boolean isEmailVerified;
 	private boolean isDeleted;
-	@OneToMany
-	private List<AccessToken> accessToken;
-	@OneToMany
-	private List<RefreshToken> refreshToken;
+	
 }

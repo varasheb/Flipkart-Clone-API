@@ -15,7 +15,12 @@ public class ScheduleJobs {
 	
 	@Scheduled(fixedDelay = 5000l*60)
 	public void deleteUser() {
-	     authService.permantDelete();
+	     authService.permantDeleteUser();
         System.err.println("User DELETED");
+	}
+	@Scheduled(fixedDelay = 5000l*60)
+	public void deleteToken() {
+		authService.permentDeleteToken();
+        System.err.println("Token DELETED");
 	}
 }
