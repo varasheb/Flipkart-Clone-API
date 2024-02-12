@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.flipkart.fms.exception.UserAlreadyExistException;
 import com.flipkart.fms.exception.UserNotFoundByIdException;
+import com.flipkart.fms.exception.UserNotLoggedInException;
 
 import jakarta.mail.MessagingException;
 
@@ -51,5 +52,9 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler (IllegalArgumentException.class)
 	public ResponseEntity<Object> handlerUserNotFoundById(IllegalArgumentException ex){
 		return structure(HttpStatus.BAD_REQUEST,ex.getMessage(),"Request Not Applicable");
+	}
+	@ExceptionHandler (UserNotLoggedInException.class)
+	public ResponseEntity<Object> handlerUserNotFoundById(UserNotLoggedInException ex){
+		return structure(HttpStatus.BAD_REQUEST,ex.getMessage(),"User not logged!!!");
 	}
 }
