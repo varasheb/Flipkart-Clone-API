@@ -3,9 +3,13 @@ package com.flipkart.fms.service;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.flipkart.fms.Util.ResponseStructure;
+import com.flipkart.fms.requestDTO.AuthRequest;
 import com.flipkart.fms.requestDTO.OtpModel;
 import com.flipkart.fms.requestDTO.UserRequest;
+import com.flipkart.fms.responseDTO.AuthResponse;
 import com.flipkart.fms.responseDTO.UserResponse;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Service
 public interface AuthService {
@@ -20,5 +24,5 @@ public interface AuthService {
 
 	ResponseEntity<ResponseStructure<UserResponse>>  verifyOTP(OtpModel otpmodel);
 
-
+	ResponseEntity<ResponseStructure<AuthResponse>> userLogin(AuthRequest authRequest,HttpServletResponse httpServletResponse);
 }
