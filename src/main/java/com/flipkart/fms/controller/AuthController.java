@@ -51,8 +51,8 @@ public class AuthController {
     	return authservice.verifyOTP(otpmodel);
     }
     @PostMapping("/login")
-	public ResponseEntity<ResponseStructure<AuthResponse>> userLogin(@RequestBody AuthRequest authRequest, HttpServletResponse httpServletResponse){
-		return authservice.userLogin(authRequest,httpServletResponse);
+	public ResponseEntity<ResponseStructure<AuthResponse>> userLogin(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String accessToken,@RequestBody AuthRequest authRequest, HttpServletResponse httpServletResponse){
+		return authservice.userLogin(accessToken,refreshToken,authRequest,httpServletResponse);
 	}
     @PostMapping("/logout")
 	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
@@ -66,8 +66,14 @@ public class AuthController {
     }
     @PostMapping("/revoke-All")
 	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
-    public ResponseEntity<SimpleResponseStructure> revokeAllDevices(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String accessToken,HttpServletResponse response) {
-    	return authservice.revokeAllAccess(refreshToken,accessToken,response);
+    public ResponseEntity<SimpleResponseStructure> revokeAllDevices(HttpServletResponse response) {
+    	return authservice.revokeAllAccess(response);
     }
+    @PostMapping("/refresh")
+   	@PreAuthorize("hasAuthority('CUSTOMER') or hasAuthority('SELLER')")
+       public ResponseEntity<SimpleResponseStructure> refresh(@CookieValue(name="rt",required=false) String refreshToken,@CookieValue(name="at",required=false) String accessToken,HttpServletResponse response) {
+       	return authservice.refresh(refreshToken,accessToken,response);
+       }
+    
     
 }

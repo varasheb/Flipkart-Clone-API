@@ -33,6 +33,7 @@ import com.flipkart.fms.entity.RefreshToken;
 import com.flipkart.fms.entity.Seller;
 import com.flipkart.fms.entity.User;
 import com.flipkart.fms.exception.UserAlreadyExistException;
+import com.flipkart.fms.exception.UserAlreadyLogInException;
 import com.flipkart.fms.exception.UserNotFoundByIdException;
 import com.flipkart.fms.exception.UserNotLoggedInException;
 import com.flipkart.fms.repository.AccessTokenRepository;
@@ -240,7 +241,9 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
-	public  ResponseEntity<ResponseStructure<AuthResponse>> userLogin(AuthRequest authRequest,HttpServletResponse httpServletResponse) {
+	public ResponseEntity<ResponseStructure<AuthResponse>> userLogin(String accessToken, String refreshToken,
+			AuthRequest authRequest, HttpServletResponse httpServletResponse) {
+		if(accessToken!=null && refreshToken!=null) throw new UserAlreadyLogInException("User already Logged in !!!");
 		String username = authRequest.getEmail().split("@")[0];
 		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username, authRequest.getPassword());
 		Authentication authentication = authenticationManager.authenticate(token);
@@ -299,7 +302,6 @@ public class AuthServiceImpl implements AuthService {
 				.build());
 
 	}
-
 	@Override
 	public ResponseEntity<SimpleResponseStructure> userLogout(String refreshToken, String accessToken,
 			HttpServletResponse response) {
@@ -333,15 +335,13 @@ public class AuthServiceImpl implements AuthService {
 		refreshTokenRepository.deleteAll(expiredRefreshTokens);
 	}
 	@Override
-	public ResponseEntity<SimpleResponseStructure> revokeAllAccess(String refreshToken, String accessToken,
-			HttpServletResponse response) {
-		if(accessToken==null && refreshToken==null) throw new UserNotLoggedInException("User is Not LoggedIn !!");
+	public ResponseEntity<SimpleResponseStructure> revokeAllAccess(HttpServletResponse response) {
         userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).ifPresent(user->{
-		accessTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,accessToken).forEach(at->{
+		accessTokenRepository.findByUserAndIsBlocked(user,false).forEach(at->{
 				at.setBlocked(true);
 				accessTokenRepository.save(at);
 			});
-		refreshTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,refreshToken).forEach(rt->{
+		refreshTokenRepository.findByUserAndIsBlocked(user,false).forEach(rt->{
 				rt.setBlocked(true);
 				refreshTokenRepository.save(rt);
 			});	
@@ -354,7 +354,6 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public ResponseEntity<SimpleResponseStructure> revokeOtherAccess(String refreshToken, String accessToken,
 			HttpServletResponse response) {
-		if(accessToken==null && refreshToken==null) throw new UserNotLoggedInException("User is Not LoggedIn !!");
         userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).ifPresent(user->{
 		accessTokenRepository.findByUserAndIsBlockedAndTokenNot(user,false,accessToken).forEach(at->{
 				at.setBlocked(true);
@@ -369,5 +368,26 @@ public class AuthServiceImpl implements AuthService {
 
 	}
 
+	@Override
+	public ResponseEntity<SimpleResponseStructure> refresh(String refreshToken, String accessToken,
+			HttpServletResponse response) {
+		  if (refreshToken == null)throw new UserNotLoggedInException("User is logged out. Please login again.");
+		  if (accessToken != null) 
+			accessTokenRepository.findByToken(accessToken).ifPresent(at->{
+					at.setBlocked(true);
+					accessTokenRepository.save(at);
+				});   
+		    refreshTokenRepository.findByToken(refreshToken).ifPresent(rt->{
+				rt.setBlocked(true);
+				refreshTokenRepository.save(rt);
+			});
+			response.addCookie(cookieManager.invalidate(new Cookie("rt","")));
+			response.addCookie(cookieManager.invalidate(new Cookie("at","")));
+			
+		    userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).ifPresent(user->{
+			grantAccess(response, user);
+			});
+		return ResponseEntity.ok(SimpleResponseStructure.builder().status(HttpStatus.OK.value()).message("Refresh sucefull!!!").build());
+	}
 
 }

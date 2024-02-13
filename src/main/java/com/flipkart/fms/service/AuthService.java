@@ -24,7 +24,7 @@ public interface AuthService {
 
 	ResponseEntity<ResponseStructure<UserResponse>>  verifyOTP(OtpModel otpmodel);
 
-	ResponseEntity<ResponseStructure<AuthResponse>> userLogin(AuthRequest authRequest,HttpServletResponse httpServletResponse);
+	ResponseEntity<ResponseStructure<AuthResponse>> userLogin(String accessToken, String refreshToken, AuthRequest authRequest,HttpServletResponse httpServletResponse);
 
 	ResponseEntity<SimpleResponseStructure> userLogout(String refreshToken, String acessToken,
 			HttpServletResponse response);
@@ -33,9 +33,11 @@ public interface AuthService {
 	
 	void permentDeleteToken();
 
-	ResponseEntity<SimpleResponseStructure> revokeAllAccess(String refreshToken, String accessToken,
-			HttpServletResponse response);
+	ResponseEntity<SimpleResponseStructure> revokeAllAccess(HttpServletResponse response);
 
 	ResponseEntity<SimpleResponseStructure> revokeOtherAccess(String refreshToken, String accessToken,
+			HttpServletResponse response);
+
+	ResponseEntity<SimpleResponseStructure> refresh(String refreshToken, String accessToken,
 			HttpServletResponse response);
 }
